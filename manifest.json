@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "TabTree - Workspace Tab Manager",
+  "version": "1.0.0",
+  "description": "Organize tabs into workspaces with tree view, auto-categorization, and smart management",
+  "permissions": [
+    "tabs",
+    "storage",
+    "sidePanel",
+    "tabGroups",
+    "bookmarks",
+    "commands",
+    "downloads"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Open TabTree"
+  },
+  "commands": {
+    "open-sidepanel": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      },
+      "description": "Open TabTree Side Panel"
+    },
+    "toggle-workspace": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+W",
+        "mac": "Command+Shift+W"
+      },
+      "description": "Toggle between workspaces"
+    },
+    "stash-current": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Stash current workspace"
+    },
+    "search-tabs": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+F",
+        "mac": "Command+Shift+F"
+      },
+      "description": "Search all tabs"
+    }
+  }
+}
