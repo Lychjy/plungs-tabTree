@@ -561,3 +561,49 @@ body.compact .workspace-item {
 .stashed-item {
   animation: fadeIn 0.15s ease;
 }
+
+/* Floating Ball */
+.floating-ball {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  color: white;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  z-index: 9999;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-right: 0;
+}
+
+.floating-ball:hover {
+  background: var(--accent-hover);
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Minimized Panel State */
+body.minimized .container {
+  display: none;
+}
+
+body.minimized .floating-ball {
+  display: flex;
+}
+
+body.minimized {
+  background: transparent;
+  width: 24px !important;
+  min-width: 24px !important;
+  max-width: 24px !important;
+  overflow: hidden;
+}

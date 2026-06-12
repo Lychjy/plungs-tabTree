@@ -4,6 +4,7 @@ let currentWorkspaceId = null;
 let isSwitching = false;
 let workspaces = [];
 let stashedSnapshots = [];
+let tabUpdateTimer = null;
 let settings = {
   autoCategorize: true,
   enableSync: true,
@@ -122,7 +123,15 @@ async function syncCurrentTabsToWorkspace() {
   });
   
   await saveData();
-  chrome.runtime.sendMessage({ type: 'tabsUpdated' });
+  
+  // Debounce the message sending to avoid flashing updates in the UI
+  if (tabUpdateTimer) {
+    clearTimeout(tabUpdateTimer);
+  }
+  tabUpdateTimer = setTimeout(() => {
+    chrome.runtime.sendMessage({ type: 'tabsUpdated' }).catch(() => {});
+    tabUpdateTimer = null;
+  }, 200);
 }
 
 // Handle tab events
@@ -256,8 +265,11 @@ async function switchToWorkspace(workspaceId) {
     // Unlock transitions
     isSwitching = false;
     
-    // Finally sync once more to capture the correct state
-    await syncCurrentTabsToWorkspace();
+    // Notify frontend to load the new workspace tabs after a small delay
+    // This ensures the debounce will capture any lingering tab changes
+    setTimeout(() => {
+      syncCurrentTabsToWorkspace();
+    }, 150);
   }
 }
 

@@ -11,6 +11,21 @@ class TabTreeSidePanel {
     this.searchQuery = '';
     this.expandedTabs = new Set();
     this.draggedTab = null;
+    this.tabUpdateTimer = null;
+    this.lastTabLoadTime = 0;
+    
+    // Create debounced version of loadCurrentTabs to avoid flashing when tabs update
+    this.debouncedLoadCurrentTabs = (...args) => {
+      if (this.tabUpdateTimer) {
+        clearTimeout(this.tabUpdateTimer);
+      }
+      this.tabUpdateTimer = setTimeout(() => {
+        // Only load if it's been at least 1 second since last load
+        if (Date.now() - this.lastTabLoadTime >= 1000) {
+          this.loadCurrentTabs(...args);
+        }
+      }, 500);
+    };
     
     this.init();
   }
@@ -119,7 +134,8 @@ class TabTreeSidePanel {
     // Settings
     document.getElementById('settingsBtn').addEventListener('click', () => this.toggleSettings());
     document.getElementById('closeSettings').addEventListener('click', () => this.toggleSettings());
-    document.getElementById('minimizeBtn').addEventListener('click', () => window.close());
+    // document.getElementById('minimizeBtn').addEventListener('click', () => this.minimizePanel());
+    document.getElementById('floatingBall').addEventListener('click', () => this.expandPanel());
 
     // Settings checkboxes
     document.getElementById('autoCategorize').addEventListener('change', (e) => this.updateSetting('autoCategorize', e.target.checked));
@@ -172,6 +188,7 @@ class TabTreeSidePanel {
       
       this.tabTree = TabTreeUtils.buildTabTree(tabs);
       this.renderTabsTree();
+      this.lastTabLoadTime = Date.now();
     } catch (e) {
       console.error('Failed to load tabs:', e);
     }
@@ -297,7 +314,7 @@ class TabTreeSidePanel {
         `;
       }
     } else if (this.settings.showFavicons && tab.favIconUrl) {
-      faviconHtml = `<img class="tab-favicon" src="${tab.favIconUrl}" onerror="this.outerHTML='${this.getDefaultBrowserIcon().replace(/\n/g, '').replace(/'/g, "\\'")}'">`;
+      faviconHtml = `<img class="tab-favicon" src="${tab.favIconUrl}" onerror="this.outerHTML='${this.getDefaultBrowserIcon().replace(/\n/g, '').replace(/'/g, "\\'")}`;
     } else {
       faviconHtml = this.getDefaultBrowserIcon();
     }
@@ -441,11 +458,20 @@ class TabTreeSidePanel {
   // Workspace actions
   async switchWorkspace(workspaceId) {
     try {
+      // Cancel any pending tab updates to avoid race conditions
+      if (this.tabUpdateTimer) {
+        clearTimeout(this.tabUpdateTimer);
+        this.tabUpdateTimer = null;
+      }
+      
       this.currentWorkspaceId = workspaceId;
-      this.renderWorkspaces();
       await chrome.runtime.sendMessage({ type: 'switchWorkspace', workspaceId });
       await this.loadData();
-      this.render();
+      // Render workspaces and stashed immediately
+      this.renderWorkspaces();
+      this.renderStashed();
+      this.applySettings();
+      // Load tabs immediately without waiting for backend message - this ensures single render
       await this.loadCurrentTabs();
     } catch (e) {
       console.error('Failed to switch workspace:', e);
@@ -561,6 +587,16 @@ class TabTreeSidePanel {
   toggleSettings() {
     const modal = document.getElementById('settingsModal');
     modal.classList.toggle('hidden');
+  }
+
+  minimizePanel() {
+    // Hide content and show floating ball, make sidepanel appear as 24px strip
+    document.body.classList.add('minimized');
+  }
+
+  expandPanel() {
+    // Show content and hide floating ball, restore normal width
+    document.body.classList.remove('minimized');
   }
 
   async updateSetting(key, value) {
@@ -768,10 +804,10 @@ class TabTreeSidePanel {
   async handleBackgroundMessage(message) {
     switch (message.type) {
       case 'tabsUpdated':
-        await this.loadCurrentTabs();
+        this.debouncedLoadCurrentTabs();
         break;
       case 'tabActivated':
-        await this.loadCurrentTabs();
+        this.debouncedLoadCurrentTabs();
         break;
       case 'workspaceSwitched':
         this.currentWorkspaceId = message.workspaceId;
