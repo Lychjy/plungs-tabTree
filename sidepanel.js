@@ -18,6 +18,7 @@ class TabTreeSidePanel {
     this.debouncedLoadCurrentTabs = (...args) => {
       if (this.tabUpdateTimer) {
         clearTimeout(this.tabUpdateTimer);
+        
       }
       this.tabUpdateTimer = setTimeout(() => {
         // Only load if it's been at least 1 second since last load
