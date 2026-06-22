@@ -389,6 +389,35 @@ body {
   border-radius: 10px;
 }
 
+.stashed-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.stashed-item:hover .stashed-actions {
+  opacity: 1;
+}
+
+.stashed-actions .icon-btn {
+  padding: 2px;
+  width: 24px;
+  height: 24px;
+  color: var(--text-secondary);
+}
+
+.stashed-actions .icon-btn:hover {
+  color: var(--accent-color);
+  background: var(--bg-hover);
+  border-radius: 4px;
+}
+
+.stashed-actions .icon-btn[data-action="delete"]:hover {
+  color: var(--danger-color);
+}
+
 /* Context Menu */
 .context-menu {
   position: fixed;

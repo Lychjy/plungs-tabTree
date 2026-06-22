@@ -418,6 +418,10 @@ class TabTreeSidePanel {
       item.className = 'stashed-item';
       item.dataset.snapshotId = snapshot.id;
       
+      const useTitle = TabTreeUtils.getTranslation('useSnapshot');
+      const renameTitle = TabTreeUtils.getTranslation('rename');
+      const deleteTitle = TabTreeUtils.getTranslation('delete');
+      
       item.innerHTML = `
         <div class="stashed-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -431,9 +435,46 @@ class TabTreeSidePanel {
           <div class="stashed-date">${TabTreeUtils.formatDate(snapshot.createdAt)}</div>
         </div>
         <span class="stashed-count">${snapshot.tabs.length}</span>
+        <div class="stashed-actions">
+          <button class="icon-btn" data-action="use" title="${useTitle}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 10 4 15 9 20"/>
+              <path d="M20 4v7a4 4 0 0 1-4 4H4"/>
+            </svg>
+          </button>
+          <button class="icon-btn" data-action="rename" title="${renameTitle}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
+          <button class="icon-btn" data-action="delete" title="${deleteTitle}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>
+        </div>
       `;
       
-      item.addEventListener('click', () => this.restoreSnapshot(snapshot.id));
+      // Use snapshot button
+      item.querySelector('[data-action="use"]').addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.restoreSnapshot(snapshot.id);
+      });
+      
+      // Rename snapshot button
+      item.querySelector('[data-action="rename"]').addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.renameSnapshot(snapshot.id);
+      });
+      
+      // Delete snapshot button
+      item.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.deleteSnapshot(snapshot.id);
+      });
+      
       item.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         this.showContextMenu(e, { type: 'snapshot', id: snapshot.id });
@@ -576,6 +617,18 @@ class TabTreeSidePanel {
     }
   }
 
+  async renameSnapshot(snapshotId) {
+    const snapshot = this.stashedSnapshots.find(s => s.id === snapshotId);
+    if (!snapshot) return;
+    
+    const name = prompt(TabTreeUtils.getTranslation('enterNewWorkspaceName'), snapshot.name);
+    if (name && name.trim()) {
+      await chrome.runtime.sendMessage({ type: 'renameSnapshot', snapshotId, name: name.trim() });
+      await this.loadData();
+      this.renderStashed();
+    }
+  }
+
   async deleteSnapshot(snapshotId) {
     if (confirm(TabTreeUtils.getTranslation('confirmDeleteSnapshot'))) {
       await chrome.runtime.sendMessage({ type: 'deleteSnapshot', snapshotId });
@@ -653,12 +706,27 @@ class TabTreeSidePanel {
     menu.style.top = `${e.clientY}px`;
     menu.dataset.context = JSON.stringify(context);
 
-    // Populate Move to Workspace submenu if right-clicked on a tab
-    const moveItem = document.getElementById('moveToWorkspaceMenuItem');
-    const submenu = document.getElementById('workspaceSubmenu');
+    // Show/hide menu items based on context type
+    const allItems = menu.querySelectorAll('.menu-item');
+    const tabItems = menu.querySelectorAll('.tab-menu-only');
+    const snapshotItems = menu.querySelectorAll('.snapshot-menu-only');
+    const workspaceItems = menu.querySelectorAll('.workspace-menu-only');
+    const dividers = menu.querySelectorAll('.menu-divider');
     
+    // Hide all type-specific items first
+    tabItems.forEach(el => el.style.display = 'none');
+    snapshotItems.forEach(el => el.style.display = 'none');
+    workspaceItems.forEach(el => el.style.display = 'none');
+    dividers.forEach(el => el.style.display = 'none');
+
     if (context.type === 'tab') {
-      moveItem.style.display = 'block';
+      tabItems.forEach(el => el.style.display = '');
+      // Show tab-related dividers
+      menu.querySelectorAll('.tab-menu-only.menu-divider').forEach(el => el.style.display = '');
+      
+      // Populate Move to Workspace submenu
+      const moveItem = document.getElementById('moveToWorkspaceMenuItem');
+      const submenu = document.getElementById('workspaceSubmenu');
       submenu.innerHTML = '';
       
       const otherWorkspaces = this.workspaces.filter(w => w.id !== this.currentWorkspaceId);
@@ -683,8 +751,10 @@ class TabTreeSidePanel {
           submenu.appendChild(subItem);
         });
       }
-    } else {
-      moveItem.style.display = 'none';
+    } else if (context.type === 'snapshot') {
+      snapshotItems.forEach(el => el.style.display = '');
+    } else if (context.type === 'workspace') {
+      workspaceItems.forEach(el => el.style.display = '');
     }
   }
 
@@ -707,6 +777,7 @@ class TabTreeSidePanel {
     const context = JSON.parse(document.getElementById('contextMenu').dataset.context);
     
     switch (action) {
+      // Tab actions
       case 'newTab':
         await chrome.tabs.create({});
         break;
@@ -738,6 +809,33 @@ class TabTreeSidePanel {
           const currentIndex = tabs.findIndex(t => t.id === context.id);
           const tabsToClose = tabs.slice(currentIndex + 1);
           await Promise.all(tabsToClose.map(t => chrome.tabs.remove(t.id)));
+        }
+        break;
+      // Snapshot actions
+      case 'useSnapshot':
+        if (context.type === 'snapshot') {
+          await this.restoreSnapshot(context.id);
+        }
+        break;
+      case 'renameSnapshot':
+        if (context.type === 'snapshot') {
+          await this.renameSnapshot(context.id);
+        }
+        break;
+      case 'deleteSnapshot':
+        if (context.type === 'snapshot') {
+          await this.deleteSnapshot(context.id);
+        }
+        break;
+      // Workspace actions
+      case 'renameWorkspace':
+        if (context.type === 'workspace') {
+          await this.renameWorkspace(context.id);
+        }
+        break;
+      case 'deleteWorkspace':
+        if (context.type === 'workspace') {
+          await this.deleteWorkspace(context.id);
         }
         break;
     }
@@ -828,6 +926,10 @@ class TabTreeSidePanel {
         await this.loadData();
         this.renderStashed();
         await this.loadCurrentTabs();
+        break;
+      case 'snapshotRenamed':
+        await this.loadData();
+        this.renderStashed();
         break;
       case 'focusSearch':
         this.toggleSearch();

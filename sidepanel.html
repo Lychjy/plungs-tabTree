@@ -106,18 +106,26 @@
 
   <!-- Context Menu -->
   <div id="contextMenu" class="context-menu hidden">
-    <div class="menu-item" data-action="newTab" data-i18n="newTab">New Tab</div>
-    <div class="menu-item" id="moveToWorkspaceMenuItem">
+    <!-- Tab menu items -->
+    <div class="menu-item tab-menu-only" data-action="newTab" data-i18n="newTab">New Tab</div>
+    <div class="menu-item tab-menu-only" id="moveToWorkspaceMenuItem">
       <span data-i18n="moveTabTo">Move to Workspace</span>
       <div id="workspaceSubmenu" class="submenu"></div>
     </div>
-    <div class="menu-divider"></div>
-    <div class="menu-item" data-action="duplicate" data-i18n="duplicate">Duplicate</div>
-    <div class="menu-item" data-action="pin" data-i18n="pin">Pin/Unpin</div>
-    <div class="menu-divider"></div>
-    <div class="menu-item" data-action="close" data-i18n="close">Close</div>
-    <div class="menu-item" data-action="closeOthers" data-i18n="closeOthers">Close Others</div>
-    <div class="menu-item" data-action="closeRight" data-i18n="closeRight">Close to Right</div>
+    <div class="menu-divider tab-menu-only"></div>
+    <div class="menu-item tab-menu-only" data-action="duplicate" data-i18n="duplicate">Duplicate</div>
+    <div class="menu-item tab-menu-only" data-action="pin" data-i18n="pin">Pin/Unpin</div>
+    <div class="menu-divider tab-menu-only"></div>
+    <div class="menu-item tab-menu-only" data-action="close" data-i18n="close">Close</div>
+    <div class="menu-item tab-menu-only" data-action="closeOthers" data-i18n="closeOthers">Close Others</div>
+    <div class="menu-item tab-menu-only" data-action="closeRight" data-i18n="closeRight">Close to Right</div>
+    <!-- Snapshot menu items -->
+    <div class="menu-item snapshot-menu-only" data-action="useSnapshot" data-i18n="useSnapshot">Use Snapshot</div>
+    <div class="menu-item snapshot-menu-only" data-action="renameSnapshot" data-i18n="rename">Rename</div>
+    <div class="menu-item snapshot-menu-only" data-action="deleteSnapshot" data-i18n="delete">Delete</div>
+    <!-- Workspace menu items -->
+    <div class="menu-item workspace-menu-only" data-action="renameWorkspace" data-i18n="rename">Rename</div>
+    <div class="menu-item workspace-menu-only" data-action="deleteWorkspace" data-i18n="delete">Delete</div>
   </div>
 
   <!-- Settings Modal -->

@@ -380,8 +380,7 @@ async function restoreSnapshot(snapshotId) {
       }
     }
 
-    // Remove snapshot after restore
-    stashedSnapshots = stashedSnapshots.filter(s => s.id !== snapshotId);
+    // Keep snapshot after restore (reusable)
     await saveData();
     chrome.runtime.sendMessage({ type: 'snapshotRestored', snapshotId });
   } catch (e) {
@@ -461,6 +460,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: true });
         break;
         
+      case 'renameSnapshot':
+        await renameSnapshot(message.snapshotId, message.name);
+        sendResponse({ success: true });
+        break;
+        
       case 'moveTabToWorkspace':
         await moveTabToWorkspace(message.tabId, message.targetWorkspaceId);
         sendResponse({ success: true });
@@ -510,18 +514,77 @@ async function renameWorkspace(workspaceId, name) {
   }
 }
 
-// Import data
+// Import data as a stashed snapshot
 async function importData(jsonString) {
   const data = TabTreeUtils.importFromJSON(jsonString);
   if (!data) return;
   
-  workspaces = data.workspaces || [];
-  currentWorkspaceId = data.currentWorkspaceId;
-  stashedSnapshots = data.stashedSnapshots || [];
-  settings = { ...settings, ...data.settings };
+  // Extract tabs from the imported JSON
+  // Supports multiple formats: direct tab array, or workspace.tabs, or full export format
+  let tabs = [];
+  if (Array.isArray(data)) {
+    tabs = data;
+  } else if (data.tabs && Array.isArray(data.tabs)) {
+    tabs = data.tabs;
+  } else if (data.workspaces && data.workspaces.length > 0) {
+    // Collect all tabs from all workspaces
+    data.workspaces.forEach(ws => {
+      if (ws.tabs && Array.isArray(ws.tabs)) {
+        tabs = tabs.concat(ws.tabs);
+      }
+    });
+  } else if (data.stashedSnapshots && data.stashedSnapshots.length > 0) {
+    // Collect all tabs from all stashed snapshots
+    data.stashedSnapshots.forEach(s => {
+      if (s.tabs && Array.isArray(s.tabs)) {
+        tabs = tabs.concat(s.tabs);
+      }
+    });
+  }
+  
+  if (tabs.length === 0) return;
+  
+  // Determine snapshot name: "快照 N" / "Snapshot N"
+  const isZh = TabTreeUtils.getLocale() === 'zh';
+  const snapshotBaseName = isZh ? '快照' : 'Snapshot';
+  const existingCount = stashedSnapshots.filter(s => s.name.startsWith(snapshotBaseName)).length;
+  
+  // Try to use original name from data if available
+  let snapshotName;
+  if (data.name && typeof data.name === 'string') {
+    snapshotName = data.name;
+  } else {
+    snapshotName = `${snapshotBaseName} ${existingCount + 1}`;
+  }
+  
+  // Normalize tabs: ensure each tab has url, title, favicon
+  const normalizedTabs = tabs.map(tab => ({
+    url: tab.url || '',
+    title: tab.title || tab.url || '',
+    favicon: tab.favicon || tab.favIconUrl || ''
+  }));
+  
+  const snapshot = {
+    id: TabTreeUtils.generateId(),
+    name: snapshotName,
+    tabs: normalizedTabs,
+    createdAt: Date.now()
+  };
+  
+  stashedSnapshots.unshift(snapshot);
   
   await saveData();
-  chrome.runtime.sendMessage({ type: 'dataImported' });
+  chrome.runtime.sendMessage({ type: 'dataImported', snapshotId: snapshot.id });
+}
+
+// Rename snapshot
+async function renameSnapshot(snapshotId, name) {
+  const snapshot = stashedSnapshots.find(s => s.id === snapshotId);
+  if (snapshot) {
+    snapshot.name = name;
+    await saveData();
+    chrome.runtime.sendMessage({ type: 'snapshotRenamed', snapshotId, name });
+  }
 }
 
 // Move a tab to a target workspace

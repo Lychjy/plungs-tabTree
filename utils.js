@@ -344,6 +344,7 @@ class TabTreeUtils {
         noOtherWorkspaces: '无其他工作区',
         newDataImported: '数据导入成功',
         minimizePanel: '收起侧边栏',
+        useSnapshot: '使用快照',
         // Categories
         'Development': '开发',
         'Social': '社交',
@@ -388,6 +389,7 @@ class TabTreeUtils {
         noOtherWorkspaces: 'No other workspaces',
         newDataImported: 'Data imported successfully',
         minimizePanel: 'Minimize Side Panel',
+        useSnapshot: 'Use Snapshot',
         // Categories
         'Development': 'Development',
         'Social': 'Social',
