@@ -190,7 +190,7 @@ class TabTreeUtils {
     const groupedIds = new Set();
 
     domainGroups.forEach((nodes, domain) => {
-      if (nodes.length >= 3) {
+      if (nodes.length >= 2) {
         const virtualDomainNode = {
           id: `virtual-domain-group-${domain}`,
           title: domain,
